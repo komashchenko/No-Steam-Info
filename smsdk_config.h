@@ -39,12 +39,12 @@
 
 /* Basic information exposed publicly */
 #define SMEXT_CONF_NAME			"No Steam Info"
-#define SMEXT_CONF_DESCRIPTION	"Add IsPlayerNoSteam"
-#define SMEXT_CONF_VERSION		"1.0"
-#define SMEXT_CONF_AUTHOR		"·٠●Феникс●٠·˙"
-#define SMEXT_CONF_URL			""
+#define SMEXT_CONF_DESCRIPTION	"Allows use RevEmu API"
+#define SMEXT_CONF_VERSION		"1.1"
+#define SMEXT_CONF_AUTHOR		"Phoenix (˙·٠●Феникс●٠·˙)"
+#define SMEXT_CONF_URL			"https://zizt.ru/ | http://hlmod.ru"
 #define SMEXT_CONF_LOGTAG		"No Steam Info"
-#define SMEXT_CONF_LICENSE		""
+#define SMEXT_CONF_LICENSE		"GPL"
 #define SMEXT_CONF_DATESTRING	__DATE__
 
 /** 
@@ -56,19 +56,19 @@
  * @brief Sets whether or not this plugin required Metamod.
  * NOTE: Uncomment to enable, comment to disable.
  */
-#define SMEXT_CONF_METAMOD		
+//#define SMEXT_CONF_METAMOD		
 
 /** Enable interfaces you want to use here by uncommenting lines */
 //#define SMEXT_ENABLE_FORWARDSYS
 //#define SMEXT_ENABLE_HANDLESYS
 #define SMEXT_ENABLE_PLAYERHELPERS
 //#define SMEXT_ENABLE_DBMANAGER
-#define SMEXT_ENABLE_GAMECONF
+//#define SMEXT_ENABLE_GAMECONF
 //#define SMEXT_ENABLE_MEMUTILS
 //#define SMEXT_ENABLE_GAMEHELPERS
 //#define SMEXT_ENABLE_TIMERSYS
 //#define SMEXT_ENABLE_THREADER
-//#define SMEXT_ENABLE_LIBSYS
+#define SMEXT_ENABLE_LIBSYS
 //#define SMEXT_ENABLE_MENUS
 //#define SMEXT_ENABLE_ADTFACTORY
 //#define SMEXT_ENABLE_PLUGINSYS

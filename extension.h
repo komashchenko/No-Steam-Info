@@ -38,21 +38,17 @@
  */
 
 #include "smsdk_ext.h"
-#include "CDetour/detours.h"
-
-#define MAXPLAYERS 65
 
 static cell_t IsPlayerNoSteam(IPluginContext *pContext, const cell_t *params);
+static cell_t RevEmu_GetPlayerType(IPluginContext *pContext, const cell_t *params);
 
 /**
  * @brief Sample implementation of the SDK Extension.
  * Note: Uncomment one of the pre-defined virtual functions in order to use it.
  */
-class NSI :public SDKExtension, public IClientListener
+class NSI :public SDKExtension
 {
-public: /* IClientListener */
-	virtual void OnClientConnected(int client);
-	
+public:
 	/**
 	 * @brief This is called after the initial loading sequence has been processed.
 	 *
@@ -62,11 +58,6 @@ public: /* IClientListener */
 	 * @return			True to succeed loading, false to fail.
 	 */
 	virtual bool SDK_OnLoad(char *error, size_t maxlength, bool late);
-	
-	/**
-	 * @brief This is called right before the extension is unloaded.
-	 */
-	virtual void SDK_OnUnload();
 };
 
 extern NSI g_NSI;

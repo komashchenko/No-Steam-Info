@@ -1,59 +1,44 @@
 #include "extension.h"
+#include "RevEmu.h"
 
 NSI g_NSI;
 SMEXT_LINK(&g_NSI);
- 
-CDetour *g_pIsRevEmuUser;
+
+pRev_BGetPlayerInfoBySteamID Rev_BGetPlayerInfoBySteamID;
 
 const sp_nativeinfo_t g_ExtensionNatives[] =
 {
-	{ "IsPlayerNoSteam",									IsPlayerNoSteam },
-	{ NULL,													NULL }
+	{ "IsPlayerNoSteam",		IsPlayerNoSteam },
+	{ "RevEmu_GetPlayerType",	RevEmu_GetPlayerType },
+	{ NULL,						NULL }
 };
-
-bool RevEmuUser;
-bool RevEmuUsers[MAXPLAYERS];
-int userid[MAXPLAYERS];
-
-DETOUR_DECL_MEMBER2(DETOUR_IsRevEmuUser, bool, const void *, void0, uint, uint0)
-{
-	RevEmuUser = DETOUR_MEMBER_CALL(DETOUR_IsRevEmuUser)(void0, uint0);
-	return RevEmuUser;
-}
-
-void NSI::OnClientConnected(int client)
-{
-	int usrid = playerhelpers->GetGamePlayer(client)->GetUserId();
-	if(userid[client] != usrid)
-	{
-		RevEmuUsers[client] = RevEmuUser;
-		userid[client] = usrid;
-	}
-}
 
 bool NSI::SDK_OnLoad(char *error, size_t maxlength, bool late)
 {
-	CDetourManager::Init(g_pSM->GetScriptingEngine(), 0);
+	const char *pLibSteamclientPath = NULL;
+	#if defined POSIX
+		pLibSteamclientPath = "./bin/steamclient.so";
+	#elif defined WIN32_LEAN_AND_MEAN
+		pLibSteamclientPath = "./bin/steamclient.dll";
+	#endif
 	
-	void * tier0 = dlopen("steamclient.so", RTLD_NOW);
-	
-	void * fn = dlsym(tier0, "_ZN10GameServer5Users5CUser12IsRevEmuUserEPKvj");
-	
-	if(!fn)
+	ILibrary *pLibrary = libsys->OpenLibrary(pLibSteamclientPath, NULL, 0);
+	if (pLibrary != NULL)
 	{
-		snprintf(error, maxlength, "RevEmu not installed");
+		Rev_BGetPlayerInfoBySteamID = (pRev_BGetPlayerInfoBySteamID)pLibrary->GetSymbolAddress("Rev_BGetPlayerInfoBySteamID");
+		pLibrary->CloseLibrary();
+		
+		if(Rev_BGetPlayerInfoBySteamID == NULL)
+		{
+			snprintf(error, maxlength, "RevEmu not installed");
+			return false;
+		}
+	}
+	else
+	{
+		snprintf(error, maxlength, "Could not open library '%s'", pLibSteamclientPath);
 		return false;
 	}
-	
-	g_pIsRevEmuUser = DETOUR_CREATE_MEMBER(DETOUR_IsRevEmuUser, fn);
-	if (!g_pIsRevEmuUser)
-	{
-		snprintf(error, maxlength, "Detour failed IsRevEmuUser");
-		return false;
-	}
-	else g_pIsRevEmuUser->EnableDetour();
-	
-	playerhelpers->AddClientListener(&g_NSI);
 	
 	sharesys->AddNatives(myself, g_ExtensionNatives);
 	sharesys->RegisterLibrary(myself, "No_Steam_Info");
@@ -63,17 +48,50 @@ bool NSI::SDK_OnLoad(char *error, size_t maxlength, bool late)
 
 static cell_t IsPlayerNoSteam(IPluginContext *pContext, const cell_t *params)
 {
-	int client = params[1];
-	IGamePlayer *pPlayer = playerhelpers->GetGamePlayer(client);
-	if (!pPlayer || !pPlayer->IsConnected())
+	IGamePlayer *pPlayer = playerhelpers->GetGamePlayer(params[1]);
+	if (pPlayer == NULL)
 	{
-		return pContext->ThrowNativeError("Client index %d is invalid", client);
+		return pContext->ThrowNativeError("Client index %d is invalid", params[1]);
+	}
+	else if (!pPlayer->IsConnected())
+	{
+		return pContext->ThrowNativeError("Client %d is not connected", params[1]);
+	}
+	else if (pPlayer->IsFakeClient())
+	{
+		return pContext->ThrowNativeError("Client %d is a bot", params[1]);
 	}
 	
-	return RevEmuUsers[client];
+	PlayerInfo_t PlayerInfo;
+	if(!Rev_BGetPlayerInfoBySteamID(pPlayer->GetSteamId64(), &PlayerInfo))
+	{
+		return pContext->ThrowNativeError("Failed get information on client %d with RevEmu", params[1]);
+	}
+	
+	return PlayerInfo.m_ePlayerType != k_eSteamLegitUser;
 }
 
-void NSI::SDK_OnUnload()
+static cell_t RevEmu_GetPlayerType(IPluginContext *pContext, const cell_t *params)
 {
-	g_pIsRevEmuUser->Destroy();
+	IGamePlayer *pPlayer = playerhelpers->GetGamePlayer(params[1]);
+	if (pPlayer == NULL)
+	{
+		return pContext->ThrowNativeError("Client index %d is invalid", params[1]);
+	}
+	else if (!pPlayer->IsConnected())
+	{
+		return pContext->ThrowNativeError("Client %d is not connected", params[1]);
+	}
+	else if (pPlayer->IsFakeClient())
+	{
+		return pContext->ThrowNativeError("Client %d is a bot", params[1]);
+	}
+	
+	PlayerInfo_t PlayerInfo;
+	if(!Rev_BGetPlayerInfoBySteamID(pPlayer->GetSteamId64(), &PlayerInfo))
+	{
+		return -1;
+	}
+	
+	return PlayerInfo.m_ePlayerType;
 }
